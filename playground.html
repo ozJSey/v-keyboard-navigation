@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>v-keyboard-navigation Playground</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 2rem;
+      display: flex; flex-direction: column; align-items: center; gap: 1.25rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 600; color: #f8fafc; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; max-width: 46rem; text-align: center; }
+    section { width: min(46rem, 100%); background: #1e293b; border-radius: 12px; padding: 1.1rem; }
+    h2 { font-size: 0.95rem; color: #f8fafc; margin-bottom: 0.2rem; }
+    p.note { color: #94a3b8; font-size: 0.8rem; margin-top: 0.6rem; line-height: 1.5; }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; }
+    .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0.7rem 0; }
+    button, select { font: inherit; font-size: 0.85rem; }
+    .toolbar { display: flex; gap: 0.3rem; padding: 0.3rem; background: #0f172a; border-radius: 8px; width: max-content; }
+    .toolbar button { background: transparent; color: #e2e8f0; border: 1px solid transparent; border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer; }
+    .toolbar button[data-keyboard-navigation-item="active"] { border-color: #475569; }
+    .toolbar button:focus-visible { outline: 2px solid #60a5fa; }
+    .pane { height: 200px; overflow-y: auto; background: #0f172a; border-radius: 8px; box-shadow: inset 0 0 0 1px #334155; }
+    .pane ul { list-style: none; }
+    .row-item { height: 40px; line-height: 40px; padding: 0 0.7rem; font-size: 0.85rem; cursor: pointer; }
+    .row-item[data-keyboard-navigation-item="active"] { background: #1d4ed8; color: #fff; }
+    .list { padding: 0.3rem; background: #0f172a; border-radius: 8px; }
+    .list div { padding: 0.35rem 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+    .list div[data-keyboard-navigation-item="active"] { background: #1d4ed8; color: #fff; }
+    .btn { background: #334155; color: #e2e8f0; border: none; border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer; }
+    .trace { color: #93c5fd; }
+    .state { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <h1>v-keyboard-navigation</h1>
+  <p class="subtitle">
+    The built ESM bundle, loaded from <code>dist/</code> through an import map — no bundler, no
+    aliasing. Run <code>npm run build</code>, then serve this folder
+    (<code>npx serve .</code> or <code>python3 -m http.server</code>) and open it: a module script
+    cannot be loaded straight off <code>file://</code>.
+  </p>
+
+  <div id="app">
+    <section>
+      <h2>Bare binding — one tab stop</h2>
+      <div class="toolbar" role="toolbar" aria-label="Formatting" v-keyboard-navigation>
+        <button v-for="name in tools" :key="name">{{ name }}</button>
+      </div>
+      <p class="note">
+        Tab in, arrow across, Tab out in one press. Type <code>c</code> to jump to Code.
+      </p>
+    </section>
+
+    <section>
+      <h2>Controlled scroll — 200 rows in a 200px box</h2>
+      <div class="row">
+        <label><input type="checkbox" v-model="controlled" /> controlled scroll</label>
+        <button class="btn" @click="resetTrace">Reset trace</button>
+      </div>
+      <div class="pane" ref="pane">
+        <ul role="listbox" aria-label="Rows" v-keyboard-navigation="scrollOptions" @keyboard-navigate="onMove">
+          <li v-for="row in rows" :key="row" role="option" class="row-item" :aria-selected="false">{{ row }}</li>
+        </ul>
+      </div>
+      <p class="note mono">scrollTop per key: <span class="trace">{{ trace.join(', ') || '—' }}</span></p>
+      <p class="note">
+        Controlled it steps 40, 80, 120 — one row per key. Untick it and the browser centres
+        instead: 120, 120, 120, 240.
+      </p>
+    </section>
+
+    <section>
+      <h2>The one-tabbable invariant</h2>
+      <div class="row">
+        <button class="btn" @click="add">Add</button>
+        <button class="btn" @click="removeFocused">Remove focused</button>
+        <button class="btn" @click="clear">Remove all</button>
+        <button class="btn" @click="refill">Refill</button>
+      </div>
+      <div class="list" ref="list" role="listbox" aria-label="Dynamic" v-keyboard-navigation>
+        <div v-for="name in names" :key="name" role="option" :aria-selected="false">{{ name }}</div>
+      </div>
+      <p class="note mono">
+        tabbable items: {{ tabbable }} · state: <span class="state">{{ state }}</span>
+      </p>
+      <p class="note">
+        The count must never leave 1 while rows exist, and removing the focused row must not drop
+        focus onto <code>&lt;body&gt;</code>.
+      </p>
+    </section>
+  </div>
+
+<script type="importmap">
+{
+  "imports": {
+    "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js"
+  }
+}
+</script>
+<script type="module">
+import { createApp, ref, computed, onMounted, onUnmounted, useTemplateRef } from 'vue'
+import { KeyboardNavigationPlugin } from './dist/vKeyboardNavigation.min.js'
+
+createApp({
+  setup() {
+    const tools = ['Bold', 'Italic', 'Underline', 'Strike', 'Code', 'Quote']
+    const rows = Array.from({ length: 200 }, (_, i) => `Row ${i + 1}`)
+    const controlled = ref(true)
+    const trace = ref([])
+    const pane = useTemplateRef('pane')
+    const scrollOptions = computed(() => ({ scroll: controlled.value }))
+
+    const onMove = () => {
+      if (!pane.value) return
+      trace.value = [...trace.value, Math.round(pane.value.scrollTop)].slice(-12)
+    }
+    const resetTrace = () => {
+      trace.value = []
+      if (pane.value) pane.value.scrollTop = 0
+    }
+
+    const names = ref(['Alpha', 'Bravo', 'Charlie', 'Delta'])
+    const list = useTemplateRef('list')
+    const tabbable = ref(0)
+    const state = ref('—')
+    let watcher
+    onMounted(() => {
+      const el = list.value
+      if (!el) return
+      const measure = () => {
+        tabbable.value = el.querySelectorAll('[tabindex="0"]').length
+        state.value = el.getAttribute('data-keyboard-navigation-state') ?? '—'
+      }
+      measure()
+      watcher = new MutationObserver(measure)
+      watcher.observe(el, { childList: true, subtree: true, attributes: true })
+    })
+    onUnmounted(() => watcher?.disconnect())
+
+    let seq = 0
+    const add = () => (names.value = [...names.value, `Item ${++seq}`])
+    const removeFocused = () => {
+      const text = (document.activeElement?.textContent ?? '').trim()
+      names.value = names.value.filter((n) => n !== text)
+    }
+    const clear = () => (names.value = [])
+    const refill = () => (names.value = ['Alpha', 'Bravo', 'Charlie', 'Delta'])
+
+    return {
+      tools, rows, controlled, trace, pane, scrollOptions, onMove, resetTrace,
+      names, list, tabbable, state, add, removeFocused, clear, refill,
+    }
+  },
+})
+  .use(KeyboardNavigationPlugin)
+  .mount('#app')
+</script>
+</body>
+</html>
