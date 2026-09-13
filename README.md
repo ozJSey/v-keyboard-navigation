@@ -1,4 +1,8 @@
-# v-keyboard-navigation
+# @ozjsey/v-keyboard-navigation
+
+## Playground
+
+Try the live examples in the [npm portfolio playground](https://github.com/ozJSey/npm-portfolio-playground).
 
 **One tab stop for a group of controls.** A Vue 3 directive that adds roving tabindex, arrow keys,
 `Home`/`End`, typeahead and `PageUp`/`PageDown` to markup you already have — and, unlike every
