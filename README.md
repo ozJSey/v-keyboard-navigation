@@ -10,10 +10,6 @@ See in action: [npm portfolio playground](https://ozjsey.github.io/npm-portfolio
 [hover as an input](https://ozjsey.github.io/npm-portfolio-playground/#v-keyboard-navigation/hover) ·
 [the imperative api](https://ozjsey.github.io/npm-portfolio-playground/#v-keyboard-navigation/api)
 
-## Playground
-
-Try the live examples in the [npm portfolio playground](https://github.com/ozJSey/npm-portfolio-playground).
-
 **One tab stop for a group of controls.** A Vue 3 directive that adds roving tabindex, arrow keys,
 `Home`/`End`, typeahead and `PageUp`/`PageDown` to markup you already have — and, unlike every
 other roving-tabindex implementation, scrolls the list the way you actually wanted.

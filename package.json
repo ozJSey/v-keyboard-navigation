@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ozJSey/vue-keyboard-navigation.git"
+    "url": "git+https://github.com/ozjsey/v-keyboard-navigation.git"
   },
-  "homepage": "https://github.com/ozJSey/vue-keyboard-navigation#readme",
+  "homepage": "https://github.com/ozjsey/v-keyboard-navigation#readme",
   "bugs": {
-    "url": "https://github.com/ozJSey/vue-keyboard-navigation/issues"
+    "url": "https://github.com/ozjsey/v-keyboard-navigation/issues"
   },
   "type": "module",
   "sideEffects": false,
@@ -26,7 +26,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup vKeyboardNavigation.ts --format esm --minify --sourcemap --dts --out-dir dist --clean && mv dist/vKeyboardNavigation.js dist/vKeyboardNavigation.min.js && mv dist/vKeyboardNavigation.js.map dist/vKeyboardNavigation.min.js.map && node -e \"const fs=require('fs');const p='dist/vKeyboardNavigation.min.js';let s=fs.readFileSync(p,'utf8');s=s.replace('//# sourceMappingURL=vKeyboardNavigation.js.map','//# sourceMappingURL=vKeyboardNavigation.min.js.map');fs.writeFileSync(p,s);\"",
