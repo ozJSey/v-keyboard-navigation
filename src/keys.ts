@@ -48,7 +48,16 @@ const NAVIGABLE_INPUT_TYPES = new Set([
   'submit',
 ])
 
-/** A control that owns its own keys: text-ish input, `select`, contenteditable. */
+/**
+ * A control that owns its own keys: text-ish input, `select`, contenteditable.
+ *
+ * Also used by `items.ts` to keep these controls out of the default item set
+ * entirely. The two rules have to agree: a text field that the arrows can
+ * enter but never leave is a keyboard trap, and that is exactly what the
+ * package used to ship — the toolbar's roving `0` landed on the filter input
+ * and neither arrow nor Home could get back out. Left out of the group, it
+ * keeps its own place in the tab order and stays reachable.
+ */
 export function isTextEntry(el: HTMLElement): boolean {
   if (el.isContentEditable) return true
   // jsdom does not implement `isContentEditable`, and a consumer's own test
@@ -66,8 +75,10 @@ export function isTextEntry(el: HTMLElement): boolean {
 }
 
 export function intentFor(event: KeyboardEvent, ctx: KeyContext): NavigationIntent | null {
-  // Somebody upstream already dealt with it — including another instance of
-  // this directive in a nested group.
+  // Somebody upstream already dealt with it. That upstream is often another
+  // instance of this directive: a nested group's host is an item of its
+  // parent, so a key pressed on it reaches both listeners, inner one first,
+  // and this is how the outer group learns to keep its hands off.
   if (event.defaultPrevented) return null
   // Modified keystrokes belong to the browser or the application.
   if (event.ctrlKey || event.metaKey || event.altKey) return null

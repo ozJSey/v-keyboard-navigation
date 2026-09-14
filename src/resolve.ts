@@ -69,6 +69,8 @@ export function resolve(
     typeaheadTimeout: opts.typeaheadTimeout ?? 500,
     homeEnd: opts.homeEnd ?? true,
     page: opts.page ?? true,
+    skipDisabled: opts.skipDisabled ?? defaults.skipDisabled,
+    hover: opts.hover ?? false,
     activedescendant: opts.activedescendant ?? false,
     scroll,
     ref: opts.ref,

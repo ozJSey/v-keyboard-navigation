@@ -1,6 +1,6 @@
 {
   "name": "@ozjsey/v-keyboard-navigation",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Vue 3 directive that turns a group of controls into one tab stop — roving tabindex, arrow keys, typeahead, Home/End, real PageUp/PageDown — with the controlled scroll (focus preventScroll + block:'nearest') the browser's own focus scroll gets wrong",
   "author": "Ozgur Seyidoglu",
   "license": "MIT",
@@ -51,6 +51,7 @@
     "accessibility",
     "a11y",
     "aria-activedescendant",
+    "hover",
     "scroll-into-view"
   ],
   "publishConfig": {

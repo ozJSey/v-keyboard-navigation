@@ -50,13 +50,22 @@ export type KeyboardNavigationContainer = HTMLElement | string | (() => HTMLElem
  */
 export interface KeyboardNavigationScrollOptions {
   /**
-   * Scrollable ancestor to scroll instead of the one native `scrollIntoView`
-   * would pick. Accepts an `HTMLElement`, a CSS selector, `:scope <sel>`
-   * (resolved with `el.closest`), or a `() => HTMLElement | null` getter.
-   * Resolving to `null` or a detached element is a silent no-op.
+   * The one element to scroll, instead of the ancestor chain native
+   * `scrollIntoView` would walk. Accepts an `HTMLElement`, a
+   * `() => HTMLElement | null` getter, or a CSS selector — and **a selector is
+   * always resolved against this group's host, never against the document**:
+   * `':scope <sel>'` is a descendant (as in CSS), a bare selector is the host
+   * itself or its nearest matching ancestor, else a descendant. Use the getter
+   * form to name an element outside the group. Resolving to `null` or to a
+   * detached element is a silent no-op — it never falls back to native.
    */
   container?: KeyboardNavigationContainer
-  /** Gap to leave between the item and the scroll edge — sticky headers. */
+  /**
+   * Gap to leave between the item and the leading scroll edge — sticky
+   * headers. Setting it means this package owns the maths: with no
+   * `container`, the nearest scrolling ancestor is scrolled rather than the
+   * whole chain.
+   */
   offset?: { top?: number; left?: number }
   /** Default `'instant'`. `'smooth'` is the wrong default for key repeat. */
   behavior?: ScrollBehavior
@@ -76,8 +85,29 @@ export interface KeyboardNavigationScrollOptions {
  */
 export type KeyboardNavigationState = 'idle' | 'active' | 'empty' | 'disabled'
 
-/** Why the active item changed. */
-export type KeyboardNavigationReason = 'key' | 'typeahead' | 'pointer' | 'api' | 'sync'
+/**
+ * Why the active item changed.
+ *
+ * `pointer` means a pointer really was involved: a `pointerdown` inside the
+ * item immediately preceded the focus. Focus arriving any other way —
+ * keyboard Tab, a programmatic `el.focus()`, a focus restore — is `focus`.
+ * (Before 0.2.0 every one of those was reported as `pointer`, so
+ * `if (reason === 'pointer') track('click')` logged a click for every Tab.)
+ *
+ * `hover` is the cursor moving onto an item under `hover: true`. It is kept
+ * apart from `pointer` on purpose: `pointer` is a press the user committed to,
+ * `hover` is a cursor passing through, and a consumer that opens a detail pane
+ * on `pointer` must not open one for every row the mouse crosses. It is also
+ * the only reason that never scrolls — see `scroll.ts`.
+ */
+export type KeyboardNavigationReason =
+  | 'key'
+  | 'typeahead'
+  | 'pointer'
+  | 'hover'
+  | 'focus'
+  | 'api'
+  | 'sync'
 
 /** Detail of the `keyboard-navigate` CustomEvent and of `onNavigate`. */
 export interface KeyboardNavigationEventDetail {
@@ -93,8 +123,14 @@ export interface KeyboardNavigationEventDetail {
  * `activeIndex` / `activeItem` / `items` re-render templates that read them.
  */
 export interface KeyboardNavigationApi {
-  /** Current items, in DOM order, after disabled/hidden filtering. */
+  /** Current arrow stops, in DOM order. */
   items: HTMLElement[]
+  /**
+   * Matched the item selector but the arrows do not stop there — see
+   * `skipDisabled` and `focusgroup="none"`. Held at `tabindex="-1"`, so
+   * reading this is how you check a group has not quietly gone unreachable.
+   */
+  skipped: HTMLElement[]
   /** Index of the one tabbable item, or `-1` when the group is empty. */
   activeIndex: number
   /** The one tabbable item, or `null` when the group is empty. */
@@ -123,7 +159,12 @@ export interface KeyboardNavigationApiRef {
 
 /** Top-level options. Every one of them exists to opt *out* of a default. */
 export interface KeyboardNavigationOptions {
-  /** `false` releases the group: tabindex restored, listeners idle. Default `true`. */
+  /**
+   * `false` releases the group: every original `tabindex` is restored and no
+   * listener acts — keys, focus and blur are all ignored, and the host reports
+   * `data-keyboard-navigation-state="disabled"` until it is turned back on.
+   * Default `true`.
+   */
   enabled?: boolean
   /**
    * Name the pattern when the host has no `role`. Read from `role` otherwise.
@@ -134,7 +175,31 @@ export interface KeyboardNavigationOptions {
   orientation?: KeyboardNavigationAxis | 'horizontal' | 'vertical'
   /** Wrap past the ends. Defaults per role: clamp for toolbar/listbox, wrap for the rest. */
   wrap?: boolean | KeyboardNavigationWrap
-  /** CSS selector for items, scoped to the host. Defaults to every focusable descendant. */
+  /**
+   * Whether the arrows step over `aria-disabled="true"` items.
+   *
+   * Defaults per role (`ROLE_DEFAULTS`): `false` for `menu` and `menubar`,
+   * where the set of options is itself information, `true` everywhere else.
+   *
+   * Only `aria-disabled` is a choice. A natively `disabled` control cannot be
+   * focused by anything, so it is never an arrow stop whatever this says —
+   * which is precisely why the APG recommends `aria-disabled` when you want an
+   * unavailable control to stay discoverable.
+   *
+   * A skipped item is held at `tabindex="-1"` so it does not become a second
+   * tab stop, and it stays announced as disabled, so the arrow list and the
+   * screen-reader list still agree. To take an element out of the group
+   * *without* calling it disabled, put `focusgroup="none"` on it: the arrows
+   * ignore it and it keeps its own place in the tab order.
+   */
+  skipDisabled?: boolean
+  /**
+   * CSS selector for items, scoped to the host. Defaults to every focusable
+   * descendant *except* controls that own their own keys — a text input, a
+   * `select`, a contenteditable — which are never arrow stops and keep their
+   * own place in the tab order. An explicit selector does not change that: a
+   * text field the arrows could enter but never leave is a dead end.
+   */
   items?: string
   /** Remember the last focused item across Tab out/in. `focusgroup`'s `nomemory` is `memory: false`. Default `true`. */
   memory?: boolean
@@ -152,10 +217,42 @@ export interface KeyboardNavigationOptions {
    */
   page?: boolean | number
   /**
+   * Let the cursor moving onto an item make it the active one, so the arrows
+   * continue from where the mouse is: arrow to item 3, hover item 7, press
+   * ArrowDown, land on item 8. Default `false` — silently moving the active
+   * item is right for a menu and wrong for a toolbar.
+   *
+   * Three rules make it safe, and all three are the reason this is not a
+   * one-line option:
+   *
+   *   - **It never moves focus *into* the group.** Focus follows the cursor
+   *     only when the keyboard is already standing on one of these items, so
+   *     hovering a list while typing in a filter input above it cannot blur
+   *     the input. See the README's "Hover as an input".
+   *   - **It never scrolls.** The hovered item is under the cursor and is
+   *     therefore already on screen; a scroll here would move the list out
+   *     from under the mouse, which fires another hover.
+   *   - **It reacts to the cursor moving, not to the document moving.**
+   *     Arrowing through a long list scrolls it, so the item under a
+   *     *stationary* cursor changes and the browser fires a pointer event
+   *     for it. Acting on that yanks the highlight back to the mouse on every
+   *     keystroke. See `hover.ts`.
+   *
+   * Moves are reported with `reason: 'hover'`. A hovered item that the arrows
+   * skip is not activated — the two lists always agree.
+   */
+  hover?: boolean
+  /**
    * Keep focus on the host and track the item with `aria-activedescendant`.
    * Default `false` (roving tabindex). In this mode the browser scrolls
    * nothing at all, so the controlled scroll is not an improvement — it is
    * the only scroll there is.
+   *
+   * Focus is claimed for the host only from *inside* the group (a click lands
+   * on the option, and the pointer means nothing unless the host holds the
+   * focus) or from nowhere at all. Focus that is outside the group — a
+   * combobox's text input, the button that opened this menu — is left exactly
+   * where it is; separating the two is what this mode is for.
    */
   activedescendant?: boolean
   /** Controlled scroll. `false` hands scrolling back to the browser. Default on. */
@@ -190,6 +287,8 @@ export interface ResolvedOptions {
   typeaheadTimeout: number
   homeEnd: boolean
   page: boolean | number
+  skipDisabled: boolean
+  hover: boolean
   activedescendant: boolean
   scroll: ResolvedScroll | null
   ref: KeyboardNavigationApiRef | undefined

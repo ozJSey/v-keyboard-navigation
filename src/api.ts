@@ -25,6 +25,7 @@ export function createApi(getGroup: () => Group): KeyboardNavigationApi {
 
   return shallowReactive<KeyboardNavigationApi>({
     items: [],
+    skipped: [],
     activeIndex: -1,
     activeItem: null,
     focus(index: number) {
