@@ -130,7 +130,11 @@ broken in the same way, and most of this release is the part that stops that.
 - 2D grids, treeview, feed and carousel remain **not implemented**.
 - Items hidden by a stylesheet rule are still not detected. Use `hidden`, `v-if` or `v-show`.
 
-## [0.2.0] — 2026-09-13
+## [0.2.0] — 2026-09-13 · never on npm
+
+This version was never published: the registry holds `0.1.0` (2026-09-13T12:51:57Z) and `0.3.0`
+(2026-09-14T10:01:53Z) and nothing between them. The date is the date of the work, and the entry
+stands because 0.3.0 inherits every change in it.
 
 **Upgrade if you render a group more than once on a page.** `0.1.0`'s controlled scroll — the
 feature the whole package is named for — could be aimed at another component's element, and there
@@ -267,7 +271,7 @@ was no way to notice from the outside.
 - 2D grids, treeview, combobox, feed and carousel remain **not implemented**.
 - Items hidden by a stylesheet rule are still not detected. Use `hidden`, `v-if` or `v-show`.
 
-## [0.1.0] — 2026-09-06
+## [0.1.0] — 2026-09-13
 
 First cut. *(Written before publication and left as it stood; 0.1.0 did go to npm, and the defects
 0.2.0 lists above were live for anyone who installed it.)*
