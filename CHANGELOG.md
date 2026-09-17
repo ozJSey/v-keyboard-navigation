@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 stays on `0.x` until it has had an independent accessibility audit — see
 `tickets/_STANDARDS.md` B9.
 
+## 0.3.1 — 2026-09-18
+
+Documentation only; no code change. The README is cut to a landing page — problem, solution,
+install, a couple of usage examples — because the playground now carries the reference: every
+option driven in a real browser rather than described in a table. Claims that could not be
+verified against the source were deleted rather than carried across.
+
 ## [0.3.0] — 2026-09-14
 
 Hover becomes an input, opt-in: arrow to item 3, move the mouse over item 7, press ArrowDown, land
