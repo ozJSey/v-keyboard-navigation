@@ -3,7 +3,10 @@
 **One tab stop for a group of controls.** A Vue 3 directive that adds roving tabindex, arrow keys,
 `Home`/`End`, typeahead and `PageUp`/`PageDown` to markup you already have.
 
-[![npm](https://img.shields.io/npm/v/@ozjsey/v-keyboard-navigation)](https://www.npmjs.com/package/@ozjsey/v-keyboard-navigation)
+[![npm](https://img.shields.io/npm/v/@ozjsey/v-keyboard-navigation.svg)](https://www.npmjs.com/package/@ozjsey/v-keyboard-navigation)
+![license MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![gzipped 5.38 KiB](https://img.shields.io/badge/gzipped-5.38%20KiB-blue.svg)
+![dependencies 0](https://img.shields.io/badge/dependencies-0-blue.svg)
 
 ## The problem
 
